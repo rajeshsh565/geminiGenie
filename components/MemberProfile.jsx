@@ -6,7 +6,7 @@ const MemberProfile = async() => {
   return (
     <div className="flex flex-col items-center gap-2">
       <h1 className="text-lg">Welcome, <span className="font-semibold">{user.firstName}</span>!</h1>
-      <UserButton afterSignOutUrl="/"/>
+      <UserButton/>
     </div>
   )
 }

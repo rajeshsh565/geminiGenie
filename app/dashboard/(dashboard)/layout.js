@@ -1,7 +1,13 @@
 import Sidebar from "@/components/Sidebar";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import { FaBarsStaggered } from "react-icons/fa6";
 
 const DashboardLayout = ({ children }) => {
+  // const {userId} = auth();
+  // if(!userId){
+  //   redirect("/");
+  // }
   return (
     <div className="drawer lg:drawer-open">
       <input type="checkbox" id="my-drawer" className="drawer-toggle"></input>

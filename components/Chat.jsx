@@ -49,7 +49,8 @@ const Chat = () => {
           return (
             <div className={`flex items-center p-3 rounded-lg ${bgc}`} key={index}>
               <span className="mr-3">{icon}</span>
-              <div>{parts[0].text.split("**").map((content, index)=>{
+              {console.log('response from ai->', parts)}
+              <div>{parts[0]?.text?.split("**")?.map((content, index)=>{
                 if(index%2==0){
                   if(content.includes("```")){
                     const arr =content.split("```");

@@ -19,6 +19,12 @@ const Message = new mongoose.Schema({
   model: {
     type: String,
   },
+  usageMetadata: {
+    promptTokenCount: Number,
+    candidatesTokenCount: Number,
+    thoughtTokenCount: Number,
+    totalTokenCount: Number,
+  },
   createdAt: {
     type: Date,
     default: Date.now

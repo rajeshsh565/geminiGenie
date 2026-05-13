@@ -1,7 +1,7 @@
 import { generateTitle } from "@/utils/ai_action";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
-import { FaRobot, FaUser } from "react-icons/fa6";
+import { FaRobot, FaUser, FaCircleInfo } from "react-icons/fa6";
 import MarkdownViewer from "./MarkdownViewer";
 import { useRouter } from "next/navigation";
 import {
@@ -15,10 +15,10 @@ import { useChatContext } from "@/app/providers";
 import { useAuth } from "@clerk/nextjs";
 
 const MODELS = [
-  { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro Preview' },
+  { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro Preview' },
   { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
-  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
-  { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite' },
+  { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview' },
+  { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite' },
 ];
 
 const Chat = ({ chatId }) => {
@@ -120,33 +120,56 @@ const Chat = ({ chatId }) => {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let accumulatedText = "";
+      let metadataFound = false;
+      let usageData = null;
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         
-        const text = decoder.decode(value, { stream: true });
-        accumulatedText += text;
+        const chunk = decoder.decode(value, { stream: true });
+        
+        // Check for metadata delimiter in the whole stream so far if not found yet
+        const fullContent = accumulatedText + chunk;
+        if (fullContent.includes("__METADATA__")) {
+          metadataFound = true;
+          const [text, metaJSON] = fullContent.split("__METADATA__");
+          accumulatedText = text;
+          
+          try {
+            if (metaJSON) {
+              usageData = JSON.parse(metaJSON);
+            }
+          } catch (e) {
+            // Metadata might be partial, wait for next chunk
+          }
+        } else {
+          accumulatedText += chunk;
+        }
 
         queryClient.setQueryData(["messages", chatId], (oldData) => {
             if (!oldData) return [placeholderMsg];
             const newData = [...oldData];
             const lastIndex = newData.length - 1;
-            // Deepish copy to avoid mutation issues
-            const lastMsg = { 
+            newData[lastIndex] = { 
                 ...newData[lastIndex],
                 message: {
                     ...newData[lastIndex].message,
-                    parts: [{ ...newData[lastIndex].message.parts[0], text: accumulatedText }]
-                }
+                    parts: [{ text: accumulatedText }]
+                },
+                usageMetadata: usageData || newData[lastIndex].usageMetadata
             };
-            newData[lastIndex] = lastMsg;
             return newData;
         });
       }
 
       // Save the final message to DB
-      await createMessage(chatId, { role: "model", parts: [{ text: accumulatedText }], model: selectedModel });
+      await createMessage(chatId, { 
+        role: "model", 
+        parts: [{ text: accumulatedText }], 
+        model: selectedModel,
+        usageMetadata: usageData
+      });
       
       // Trigger title update if needed
       updateChatTitle();
@@ -404,7 +427,37 @@ const Chat = ({ chatId }) => {
                   <div className="flex items-center font-bold text-primary">
                     {icon}&nbsp;{role === "user" ? "(You):-" : `(${getModelName(msg_obj.model || "Gemini AI")}):-`}
                   </div>
-                  <div className="flex items-center">
+                   <div className="flex items-center gap-2">
+                    {role === "model" && msg_obj.usageMetadata && (
+                      <div className="dropdown dropdown-end dropdown-hover">
+                        <div tabIndex={0} role="button" className="text-info cursor-help">
+                          <FaCircleInfo size={14} />
+                        </div>
+                        <div tabIndex={0} className="dropdown-content z-[1] card card-compact w-48 p-2 shadow bg-base-300 text-base-content border border-base-content/20">
+                          <div className="card-body p-1">
+                            <h3 className="font-bold border-b border-base-content/10 mb-1 pb-1">Token Usage</h3>
+                            <div className="flex justify-between text-[10px]">
+                              <span>Prompt:</span>
+                              <span className="font-mono">{msg_obj.usageMetadata.promptTokenCount || 0}</span>
+                            </div>
+                            <div className="flex justify-between text-[10px]">
+                              <span>Response:</span>
+                              <span className="font-mono">{msg_obj.usageMetadata.candidatesTokenCount || 0}</span>
+                            </div>
+                            {msg_obj.usageMetadata.thoughtTokenCount > 0 && (
+                              <div className="flex justify-between text-[10px] text-secondary">
+                                <span>Thinking:</span>
+                                <span className="font-mono">{msg_obj.usageMetadata.thoughtTokenCount}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between text-xs font-bold mt-1 pt-1 border-t border-base-content/10">
+                              <span>Total:</span>
+                              <span>{msg_obj.usageMetadata.totalTokenCount || 0}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     <span className="text-xs ">
                       {formatted_timestamp ? formatted_timestamp : ""}
                     </span>

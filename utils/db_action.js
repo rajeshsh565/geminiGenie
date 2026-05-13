@@ -59,12 +59,18 @@ export const createMessage = async (chatId, message) => {
     if (!userChat) {
       return { success: false, error: "Chat not found or permission denied." };
     }
-    const new_msg = await MessageModel.create({ chatId, message, model: message.model });
+    const new_msg = await MessageModel.create({ 
+      chatId, 
+      message, 
+      model: message.model,
+      usageMetadata: message.usageMetadata 
+    });
     userChat.updatedAt = new Date();
     await userChat.save();
     const resp_msg_obj = {
       message: JSON.parse(JSON.stringify(new_msg.message)),
       model: new_msg.model,
+      usageMetadata: new_msg.usageMetadata,
       createdAt: new_msg.createdAt,
     };
     return { success: true, data: resp_msg_obj };

@@ -9,25 +9,25 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.35.2",
-    "@clerk/themes": "^2.4.37",
+    "@clerk/nextjs": "^7.3.3",
+    "@clerk/themes": "^2.4.57",
     "@google/genai": "^1.30.0",
     "@prisma/client": "^6.19.0",
     "@tailwindcss/postcss": "^4.1.17",
     "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-query": "^5.90.10",
     "@tanstack/react-query-devtools": "^5.90.2",
-    "axios": "^1.13.2",
+    "axios": "^1.16.1",
     "daisyui": "^5.5.5",
-    "dompurify": "^3.3.0",
+    "dompurify": "^3.4.3",
     "he": "^1.2.0",
     "highlight.js": "^11.11.1",
     "markdown-to-jsx": "^8.0.0",
     "marked": "^17.0.0",
     "marked-code-jsx-renderer": "^1.2.10",
     "marked-highlight": "^2.2.3",
-    "mongoose": "^8.20.0",
-    "next": "16.0.3",
+    "mongoose": "^9.6.2",
+    "next": "16.2.6",
     "react": "^19",
     "react-dom": "^19",
     "react-hot-toast": "^2.6.0",
@@ -36,7 +36,10 @@
     "react-syntax-highlighter": "^16.1.0"
   },
   "devDependencies": {
-    "postcss": "^8.5.6",
+    "postcss": "^8.5.14",
     "tailwindcss": "^4.1.17"
+  },
+  "overrides": {
+    "postcss": "^8.5.14"
   }
 }

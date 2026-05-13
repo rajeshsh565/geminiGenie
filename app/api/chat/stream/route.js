@@ -4,8 +4,6 @@ import { NextResponse } from "next/server";
 export async function POST(req) {
   try {
     const { messages, query, thinkingLevel, model } = await req.json();
-    console.log("thinking level", thinkingLevel);
-    console.log("model", model);
 
     const config = {
       tools: [
@@ -36,22 +34,35 @@ export async function POST(req) {
       async start(controller) {
         const encoder = new TextEncoder();
         let isFirstChunk = true;
+        let lastUsage = null;
         try {
           for await (const chunk of result) {
             const text = chunk.text;
-            
-            // Debug logging to see what's in the chunk
-            // console.log("Chunk received. Has text:", !!text);
-
+            if (chunk.usageMetadata) {
+              lastUsage = chunk.usageMetadata;
+            }
             if (text) {
                if (isFirstChunk) {
-                  const timeToFirstChunk = Date.now() - startTime;
-                  console.log(`API: Time to first CONTENT chunk (${thinkingLevel || 'low'}): ${timeToFirstChunk}ms`);
                   isFirstChunk = false;
                }
               controller.enqueue(encoder.encode(text));
             }
           }
+          
+          // Get usage metadata after stream is fully consumed
+          try {
+            const response = await result.response;
+            const usage = response.usageMetadata || lastUsage;
+            if (usage) {
+              const metadataStr = `__METADATA__${JSON.stringify(usage)}`;
+              controller.enqueue(encoder.encode(metadataStr));
+            }
+          } catch (usageError) {
+            if (lastUsage) {
+              controller.enqueue(encoder.encode(`__METADATA__${JSON.stringify(lastUsage)}`));
+            }
+          }
+
           controller.close();
         } catch (error) {
           console.error("Streaming error:", error);

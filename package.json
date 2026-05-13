@@ -9,25 +9,34 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@clerk/nextjs": "^5.2.8",
-    "@clerk/themes": "^2.1.1",
-    "@google/generative-ai": "^0.10.0",
-    "@prisma/client": "^5.13.0",
-    "@tailwindcss/typography": "^0.5.13",
-    "@tanstack/react-query": "^5.32.1",
-    "@tanstack/react-query-devtools": "^5.32.1",
-    "axios": "^1.6.8",
-    "daisyui": "^4.10.3",
-    "highlight.js": "^11.10.0",
-    "next": "14.2.3",
-    "openai": "^4.40.0",
-    "react": "^18",
-    "react-dom": "^18",
-    "react-hot-toast": "^2.4.1",
-    "react-icons": "^5.3.0"
+    "@clerk/nextjs": "^6.35.2",
+    "@clerk/themes": "^2.4.37",
+    "@google/genai": "^1.30.0",
+    "@prisma/client": "^6.19.0",
+    "@tailwindcss/postcss": "^4.1.17",
+    "@tailwindcss/typography": "^0.5.19",
+    "@tanstack/react-query": "^5.90.10",
+    "@tanstack/react-query-devtools": "^5.90.2",
+    "axios": "^1.13.2",
+    "daisyui": "^5.5.5",
+    "dompurify": "^3.3.0",
+    "he": "^1.2.0",
+    "highlight.js": "^11.11.1",
+    "markdown-to-jsx": "^8.0.0",
+    "marked": "^17.0.0",
+    "marked-code-jsx-renderer": "^1.2.10",
+    "marked-highlight": "^2.2.3",
+    "mongoose": "^8.20.0",
+    "next": "16.0.3",
+    "react": "^19",
+    "react-dom": "^19",
+    "react-hot-toast": "^2.6.0",
+    "react-icons": "^5.5.0",
+    "react-markdown": "^10.1.0",
+    "react-syntax-highlighter": "^16.1.0"
   },
   "devDependencies": {
-    "postcss": "^8",
-    "tailwindcss": "^3.4.1"
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.17"
   }
 }

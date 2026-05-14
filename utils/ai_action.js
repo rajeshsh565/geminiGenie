@@ -43,33 +43,41 @@ export const generateResponse = async ({ messages=[], query }) => {
 };
 
 export const generateTitle = async (messages = []) => {
-  const chat = ai.chats.create({
-    model: 'gemini-2.5-flash-lite',
-    history: messages
-  });
-  const text = `Generate a title for this chat (excluding this message), respond only in JSON so it could be directly extract using JSON.parse(). Keep the title short and concise but descriptive. Do not include any markup or any other text.
-  Example:
-  {
-    chat_title: "Greetings"
-  } // ACCEPTED
-  `;
-  let retry_counter = 0;
-  let ai_response;
-  let title;
-  while (!title) {
-    ai_response = await chat.sendMessage({ message: text });
-    const match = ai_response.text.match(/{[\s\S]*}/);
-    const cleaned_text = match ? match[0] : ai_response.text;
-    try {
-      const { chat_title } = JSON.parse(cleaned_text);
-      title = chat_title;
-      break;
-    } catch (error) {
-      retry_counter++;
-      if (retry_counter > 3) {
-        break;
+  try {
+    const chat = ai.chats.create({
+      model: 'gemini-3-flash-preview',
+      history: messages,
+      config: {
+        responseMimeType: "application/json"
       }
+    });
+    
+    const text = `Generate a title for this chat (excluding this message). Respond ONLY in JSON. Keep the title short and concise but descriptive. Do not include any markdown formatting. Example: {"chat_title": "Greetings"}`;
+    
+    let retry_counter = 0;
+    let title = null;
+    
+    while (!title && retry_counter < 3) {
+      try {
+        const ai_response = await chat.sendMessage({ message: text });
+        const match = ai_response.text.match(/{[\s\S]*}/);
+        const cleaned_text = match ? match[0] : ai_response.text;
+        const parsed = JSON.parse(cleaned_text);
+        
+        if (parsed && (parsed.chat_title || parsed.title)) {
+          title = parsed.chat_title || parsed.title;
+          break;
+        }
+      } catch (error) {
+        console.error("Title generation API/parsing error:", error.message);
+      }
+      retry_counter++;
+      if (!title) await new Promise(resolve => setTimeout(resolve, 1500)); // Delay to prevent 429
     }
+    
+    return title || "Untitled Chat";
+  } catch (error) {
+    console.error("Failed to initialize generateTitle:", error.message);
+    return "Untitled Chat";
   }
-  return title;
 }

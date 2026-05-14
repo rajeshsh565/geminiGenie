@@ -11,6 +11,7 @@
   "dependencies": {
     "@clerk/nextjs": "^7.3.3",
     "@clerk/themes": "^2.4.57",
+    "@google-cloud/storage": "^7.19.0",
     "@google/genai": "^1.30.0",
     "@prisma/client": "^6.19.0",
     "@tailwindcss/postcss": "^4.1.17",
@@ -22,6 +23,7 @@
     "dompurify": "^3.4.3",
     "he": "^1.2.0",
     "highlight.js": "^11.11.1",
+    "jsdom": "^29.1.1",
     "markdown-to-jsx": "^8.0.0",
     "marked": "^17.0.0",
     "marked-code-jsx-renderer": "^1.2.10",

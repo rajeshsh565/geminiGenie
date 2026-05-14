@@ -1,0 +1,192 @@
+
+--- NEW REQUEST AT 2026-05-14T19:15:21.158Z ---
+{
+  "candidates": [
+    {
+      "content": {
+        "role": "model",
+        "parts": [
+          {
+            "text": "**Expanding and Obscuring**\n\nI'm focusing on widening the initial image. My plan involves superimposing substantial black rectangles to predominantly conceal the individual on the bed, specifically their torso and lower extremities. The intent is to isolate the bed and its accompanying pillows as the sole visible elements in the surrounding areas of these added blocks.\n\n",
+            "thought": true
+          }
+        ]
+      }
+    }
+  ],
+  "createTime": "2026-05-14T19:14:48.216682Z",
+  "modelVersion": "gemini-3-pro-image-preview",
+  "responseId": "KB8GauqcDcGD694P3suXUQ",
+  "usageMetadata": {
+    "trafficType": "ON_DEMAND"
+  },
+  "sdkHttpResponse": {
+    "headers": {
+      "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
+      "content-disposition": "attachment",
+      "content-type": "text/event-stream",
+      "date": "Thu, 14 May 2026 19:15:21 GMT",
+      "server": "scaffolding on HTTPServer2",
+      "transfer-encoding": "chunked",
+      "vary": "Origin, X-Origin, Referer",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "SAMEORIGIN",
+      "x-xss-protection": "0"
+    }
+  }
+}
+
+{
+  "candidates": [
+    {
+      "content": {
+        "role": "model",
+        "parts": [
+          {
+            "text": "**Widening and Concealing**\n\nI'm currently working on expanding the canvas horizontally and introducing large black rectangular blocks. These blocks are positioned to primarily obscure the individual on the bed, focusing on their torso and lower body, leaving only the bed and pillows exposed around the added areas.\n\n",
+            "thought": true
+          }
+        ]
+      }
+    }
+  ],
+  "createTime": "2026-05-14T19:14:48.216682Z",
+  "modelVersion": "gemini-3-pro-image-preview",
+  "responseId": "KB8GauqcDcGD694P3suXUQ",
+  "usageMetadata": {
+    "trafficType": "ON_DEMAND"
+  },
+  "sdkHttpResponse": {
+    "headers": {
+      "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
+      "content-disposition": "attachment",
+      "content-type": "text/event-stream",
+      "date": "Thu, 14 May 2026 19:15:21 GMT",
+      "server": "scaffolding on HTTPServer2",
+      "transfer-encoding": "chunked",
+      "vary": "Origin, X-Origin, Referer",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "SAMEORIGIN",
+      "x-xss-protection": "0"
+    }
+  }
+}
+
+{
+  "candidates": [
+    {
+      "content": {
+        "role": "model",
+        "parts": [
+          {
+            "text": "**Analyzing Image Match**\n\nI've confirmed the generated image aligns with all specified parameters. The expansion included the requested nightstand and window, and the censoring accurately covers the lower body while preserving the face.\n\n",
+            "thought": true
+          }
+        ]
+      }
+    }
+  ],
+  "createTime": "2026-05-14T19:14:48.216682Z",
+  "modelVersion": "gemini-3-pro-image-preview",
+  "responseId": "KB8GauqcDcGD694P3suXUQ",
+  "usageMetadata": {
+    "trafficType": "ON_DEMAND"
+  },
+  "sdkHttpResponse": {
+    "headers": {
+      "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
+      "content-disposition": "attachment",
+      "content-type": "text/event-stream",
+      "date": "Thu, 14 May 2026 19:15:21 GMT",
+      "server": "scaffolding on HTTPServer2",
+      "transfer-encoding": "chunked",
+      "vary": "Origin, X-Origin, Referer",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "SAMEORIGIN",
+      "x-xss-protection": "0"
+    }
+  }
+}
+
+{
+  "candidates": [
+    {
+      "content": {
+        "role": "model",
+        "parts": [
+          {
+            "text": "**Verifying Request Compliance**\n\nI've reviewed the generated output and it precisely mirrors the prompt's specifications. The requested expansion incorporated the nightstand and window elements, and the censoring correctly masked the lower body while ensuring facial visibility.\n\n",
+            "thought": true
+          }
+        ]
+      }
+    }
+  ],
+  "createTime": "2026-05-14T19:14:48.216682Z",
+  "modelVersion": "gemini-3-pro-image-preview",
+  "responseId": "KB8GauqcDcGD694P3suXUQ",
+  "usageMetadata": {
+    "trafficType": "ON_DEMAND"
+  },
+  "sdkHttpResponse": {
+    "headers": {
+      "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
+      "content-disposition": "attachment",
+      "content-type": "text/event-stream",
+      "date": "Thu, 14 May 2026 19:15:21 GMT",
+      "server": "scaffolding on HTTPServer2",
+      "transfer-encoding": "chunked",
+      "vary": "Origin, X-Origin, Referer",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "SAMEORIGIN",
+      "x-xss-protection": "0"
+    }
+  }
+}
+
+{
+  "candidates": [
+    {
+      "content": {
+        "role": "model"
+      },
+      "finishReason": "IMAGE_SAFETY",
+      "finishMessage": "Unable to show the generated image. The image was filtered out because it violated Vertex AI's usage guidelines. You will not be charged for blocked images. Try rephrasing the prompt. If you think this was an error, send feedback. Support code: 14952152.",
+      "groundingMetadata": {}
+    }
+  ],
+  "createTime": "2026-05-14T19:14:48.216682Z",
+  "modelVersion": "gemini-3-pro-image-preview",
+  "responseId": "KB8GauqcDcGD694P3suXUQ",
+  "usageMetadata": {
+    "promptTokenCount": 2285,
+    "totalTokenCount": 2595,
+    "trafficType": "ON_DEMAND",
+    "promptTokensDetails": [
+      {
+        "modality": "IMAGE",
+        "tokenCount": 1680
+      },
+      {
+        "modality": "TEXT",
+        "tokenCount": 605
+      }
+    ],
+    "thoughtsTokenCount": 310
+  },
+  "sdkHttpResponse": {
+    "headers": {
+      "alt-svc": "h3=\":443\"; ma=2592000,h3-29=\":443\"; ma=2592000",
+      "content-disposition": "attachment",
+      "content-type": "text/event-stream",
+      "date": "Thu, 14 May 2026 19:15:21 GMT",
+      "server": "scaffolding on HTTPServer2",
+      "transfer-encoding": "chunked",
+      "vary": "Origin, X-Origin, Referer",
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "SAMEORIGIN",
+      "x-xss-protection": "0"
+    }
+  }
+}
+

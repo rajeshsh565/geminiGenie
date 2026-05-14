@@ -29,6 +29,7 @@ const MarkdownViewer = ({ content, role }) => {
     const rawMarkup = marked.parse(textToProcess);
     return DOMPurify.sanitize(rawMarkup, {
       ADD_ATTR: ["target"],
+      ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|data):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
     });
   }, [textToProcess]);
 

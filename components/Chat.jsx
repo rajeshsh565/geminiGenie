@@ -2,6 +2,7 @@ import { generateTitle } from "@/utils/ai_action";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
 import { FaRobot, FaUser, FaCircleInfo } from "react-icons/fa6";
+import { FaImage, FaTimes } from "react-icons/fa";
 import MarkdownViewer from "./MarkdownViewer";
 import { useRouter } from "next/navigation";
 import {
@@ -19,6 +20,9 @@ const MODELS = [
   { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
   { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview' },
   { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite' },
+  { id: 'gemini-3.1-flash-image-preview', name: 'Nano Banana 2 (Image)' },
+  { id: 'gemini-3-pro-image-preview', name: 'Nano Banana Pro (Image)' },
+  { id: 'imagen-3.0-generate-002', name: 'Imagen 3' },
 ];
 
 const Chat = ({ chatId }) => {
@@ -26,6 +30,30 @@ const Chat = ({ chatId }) => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [thinkingLevel, setThinkingLevel] = useState("low");
   const [selectedModel, setSelectedModel] = useState(MODELS[2].id); // Default to Flash
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    const saved = sessionStorage.getItem("selectedModel");
+    if (saved && MODELS.find(m => m.id === saved)) {
+      setSelectedModel(saved);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isMounted) {
+      sessionStorage.setItem("selectedModel", selectedModel);
+    }
+  }, [selectedModel, isMounted]);
+  
+  // Image Upload State
+  const fileInputRef = useRef(null);
+  const [base64Image, setBase64Image] = useState(null);
+  const [imageMimeType, setImageMimeType] = useState(null);
+  const [rawFile, setRawFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState("1:1");
+
   const messagesInitialized = useRef(false);
   const newMsgRef = useRef(null);
   const scrollContainerRef = useRef(null);
@@ -46,11 +74,6 @@ const Chat = ({ chatId }) => {
        
        if (textWidth > containerWidth) {
          setShouldAnimate(true);
-         // Calculate the exact translation needed to just show the end
-         // We want to translate by -(textWidth - containerWidth)
-         // Adding a small buffer (e.g. 20px) to ensure full visibility if needed, or exact.
-         // User said "stop when last character is on screen".
-         // So exactly -(textWidth - containerWidth).
          const offset = textWidth - containerWidth;
          setMarqueeEnd(`-${offset}px`);
        } else {
@@ -62,7 +85,6 @@ const Chat = ({ chatId }) => {
 
   const handleScroll = (e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.target;
-    // Check if user is near the bottom (within 50px)
     const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
     isUserScrolledUp.current = !isAtBottom;
   };
@@ -73,7 +95,7 @@ const Chat = ({ chatId }) => {
   const { userId } = useAuth();
   const { chats } = useChatContext();
   const current_chat = chats?.find((chat) => chat?._id === chatId);
-  const prevMsgLen = useRef(0); // Initialize with 0
+  const prevMsgLen = useRef(0);
 
   const { data: messages = [], isLoading } = useQuery({
     queryKey: ["messages", chatId],
@@ -92,12 +114,40 @@ const Chat = ({ chatId }) => {
     enabled: !!chatId,
   });
 
-  const processStream = async (query, history) => {
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please upload an image file.");
+        return;
+      }
+      
+      setRawFile(file);
+      setImageMimeType(file.type);
+
+      // Create a local preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result.split(",")[1];
+        setBase64Image(base64String);
+      };
+      reader.readAsDataURL(file);
+    }
+    // reset the input
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const clearImage = () => {
+    setBase64Image(null);
+    setImageMimeType(null);
+    setRawFile(null);
+  };
+
+  const processStream = async (queryParts, history) => {
     if (isStreaming) return;
     setIsStreaming(true);
     
     try {
-      // Add placeholder message
       const placeholderMsg = {
         message: { role: "model", parts: [{ text: "" }] },
         model: selectedModel,
@@ -108,10 +158,19 @@ const Chat = ({ chatId }) => {
         return [...(oldData || []), placeholderMsg];
       });
 
+      const isImageModel = selectedModel.includes('image') || selectedModel.includes('imagen');
+      const imageConfig = isImageModel ? { aspectRatio } : undefined;
+
       const response = await fetch('/api/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, messages: history, thinkingLevel, model: selectedModel }),
+        body: JSON.stringify({ 
+          query: queryParts, 
+          messages: history, 
+          thinkingLevel, 
+          model: selectedModel,
+          imageConfig
+        }),
       });
 
       if (!response.ok) throw new Error(response.statusText);
@@ -129,7 +188,6 @@ const Chat = ({ chatId }) => {
         
         const chunk = decoder.decode(value, { stream: true });
         
-        // Check for metadata delimiter in the whole stream so far if not found yet
         const fullContent = accumulatedText + chunk;
         if (fullContent.includes("__METADATA__")) {
           metadataFound = true;
@@ -141,7 +199,6 @@ const Chat = ({ chatId }) => {
               usageData = JSON.parse(metaJSON);
             }
           } catch (e) {
-            // Metadata might be partial, wait for next chunk
           }
         } else {
           accumulatedText += chunk;
@@ -163,7 +220,6 @@ const Chat = ({ chatId }) => {
         });
       }
 
-      // Save the final message to DB
       await createMessage(chatId, { 
         role: "model", 
         parts: [{ text: accumulatedText }], 
@@ -171,7 +227,6 @@ const Chat = ({ chatId }) => {
         usageMetadata: usageData
       });
       
-      // Trigger title update if needed
       updateChatTitle();
 
     } catch (error) {
@@ -183,7 +238,7 @@ const Chat = ({ chatId }) => {
   };
 
   const newChatMutation = useMutation({
-    mutationFn: async (input_text) => {
+    mutationFn: async (msg_parts) => {
       const { success, error, data } = await createChat();
       if(!success)
         return { success, error };
@@ -191,7 +246,7 @@ const Chat = ({ chatId }) => {
       if (chat_id) {
         const new_msg_resp = await createMessage(chat_id, {
           role: "user",
-          parts: [{ text: input_text }],
+          parts: msg_parts,
         });
         return { chat_id, ...new_msg_resp };
       }
@@ -205,9 +260,7 @@ const Chat = ({ chatId }) => {
       const { chat_id, data: new_msg_obj } = resp;
       queryClient.setQueryData(["messages", chat_id], [new_msg_obj]);
       router.push(`/dashboard/chat/${chat_id}`);
-      queryClient.invalidateQueries({
-        queryKey: ["messages", undefined],
-      });
+      queryClient.setQueryData(["messages", undefined], []);
     },
   });
 
@@ -225,15 +278,10 @@ const Chat = ({ chatId }) => {
     isUpdatingTitle.current = true;
     let history = [];
     if(messages.length<=4){
-      history = messages.map((msg_obj) => {
-        return msg_obj.message;
-      });
+      history = messages.map((msg_obj) => msg_obj.message);
     } else {
-      history = messages.slice(0,4).map((msg_obj) => {
-        return msg_obj.message;
-      });
+      history = messages.slice(0,4).map((msg_obj) => msg_obj.message);
     }
-    // generate title
     const title = await generateTitle(history);
     const { success } = await setChatTitle(chatId, title);
     if(success){
@@ -244,30 +292,68 @@ const Chat = ({ chatId }) => {
     isUpdatingTitle.current = false;
   }
 
-  const handleForm = (e) => {
+  const handleForm = async (e) => {
     e.preventDefault();
     let trimmedText = inputText.trim();
-    if (!trimmedText) return;
+    if (!trimmedText && !rawFile) return;
+    
+    setIsUploading(true);
+    const parts = [];
+    if (trimmedText) {
+      parts.push({ text: trimmedText });
+    }
+    
+    if (rawFile) {
+      try {
+        const extension = rawFile.name.split('.').pop();
+        // 1. Get signed URL
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contentType: rawFile.type, extension }),
+        });
+        
+        if (!res.ok) throw new Error("Failed to get signed URL");
+        const { signedUrl, fileUri } = await res.json();
+        
+        // 2. Upload to GCS directly
+        const uploadRes = await fetch(signedUrl, {
+          method: "PUT",
+          headers: { "Content-Type": rawFile.type },
+          body: rawFile,
+        });
+        
+        if (!uploadRes.ok) throw new Error("Failed to upload to GCS");
+
+        // 3. Attach Vertex GCS URI reference to parts
+        parts.push({ fileData: { fileUri: fileUri, mimeType: rawFile.type } });
+      } catch (err) {
+        console.error("Upload error:", err);
+        toast.error("Failed to upload image to Cloud Storage.");
+        setIsUploading(false);
+        return;
+      }
+    }
+
+    setIsUploading(false);
+
     const new_msg_obj = {
       message: {
         role: "user",
-        parts: [{ text: trimmedText }],
+        parts: parts,
       },
       createdAt: new Date().toISOString(),
     };
+
     if (chatId) {
       queryClient.setQueryData(
         ["messages", chatId],
         [...messages, new_msg_obj]
       );
       createMessage(chatId, new_msg_obj.message);
-      // scrollIntoView removed here, handled by useEffect
       
-      const history = messages.map((msg_obj) => {
-        return msg_obj.message;
-      });
-      
-      processStream(trimmedText, history);
+      const history = messages.map((msg_obj) => msg_obj.message);
+      processStream(parts, history);
 
     } else {
       isNavigating.current = true;
@@ -275,25 +361,25 @@ const Chat = ({ chatId }) => {
         ["messages", chatId],
         [new_msg_obj]
       );
-      newChatMutation.mutate(trimmedText);
+      newChatMutation.mutate(parts);
     }
     setInputText("");
+    clearImage();
   };
 
   useEffect(() => {
+    if (!isMounted) return;
     if (chatId && messages.length === 1) {
-      // Check if the last message is from user and we haven't responded yet
       const { message } = messages[0];
       if (message.role === 'user') {
-         processStream(message.parts[0].text, []);
+         processStream(message.parts, []);
       }
     }
     if(chatId && messages.length>1){
       updateChatTitle();
     }
-  }, [chatId, messages]); 
+  }, [chatId, messages, isMounted]); 
 
-  // Auto-scroll during streaming
   const lastMessage = messages[messages.length - 1];
   const lastMessageText = lastMessage?.message?.parts?.[0]?.text;
 
@@ -314,13 +400,41 @@ const Chat = ({ chatId }) => {
         prevMsgLen.current = messages.length;
       } else {
         if (messages.length > prevMsgLen.current) {
-            // New message added (User or AI placeholder)
             newMsgRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
             prevMsgLen.current = messages.length;
         }
       }
     }
   }, [messages.length]);
+
+  const renderMessageParts = (parts, role) => {
+    return parts.map((part, i) => {
+      if (part.text) {
+        return <MarkdownViewer key={i} content={part.text} role={role} />;
+      }
+      if (part.inlineData) {
+        return (
+          <img 
+            key={i} 
+            src={`data:${part.inlineData.mimeType};base64,${part.inlineData.data}`} 
+            alt="Uploaded content" 
+            className="max-w-sm rounded-lg shadow-sm border border-base-content/10 mb-2"
+          />
+        );
+      }
+      if (part.fileData && part.fileData.fileUri) {
+        return (
+          <img 
+            key={i} 
+            src={`/api/image?uri=${encodeURIComponent(part.fileData.fileUri)}`} 
+            alt="Uploaded content" 
+            className="max-w-sm rounded-lg shadow-sm border border-base-content/10 mb-2"
+          />
+        );
+      }
+      return null;
+    });
+  };
 
   if (isLoading) {
     return (
@@ -329,84 +443,138 @@ const Chat = ({ chatId }) => {
       </div>
     );
   }
+
+  const isImageModel = selectedModel.includes('image') || selectedModel.includes('imagen');
+
   return (
     <div className="flex flex-col h-screen">
       <header className="font-bold border-b rounded-lg flex items-center px-3 h-14 min-h-14 line-clamp-1 cursor-normal select-none">
         {chatId ? current_chat?.title??"Untitled Chat" : "New Chat"}
       </header>
-      <div className="flex flex-col-reverse grow min-h-0">
-        <form className="w-full join items-end" onSubmit={handleForm}>
-          <textarea
-            className="input input-bordered outline-none! border-b-0 rounded-lg rounded-b-none mt-3 join-item max-h-52 h-24 sm:h-28 w-full py-2 text-wrap"
-            placeholder="Enter Query Here..."
-            name="query"
-            autoComplete="off"
-            onChange={(e) => {
-              setInputText(e.currentTarget.value);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleForm(e);
-              }
-            }}
-            rows="2"
-            value={inputText}
-          />
-          <div className="relative join-item border border-base-content/20 border-b-0 border-r-0 h-12 sm:h-14 w-[140px] overflow-hidden bg-base-100 flex items-center rounded-none">
-            {/* Display Layer - Behind the select */}
-            <div className="absolute inset-0 flex items-center px-2 pointer-events-none">
-              <div className="w-full overflow-hidden whitespace-nowrap" ref={marqueeContainerRef}>
-                <span 
-                  ref={marqueeTextRef}
-                  className={`inline-block ${shouldAnimate ? 'animate-marquee' : ''}`}
-                  style={shouldAnimate ? { '--marquee-end': marqueeEnd } : {}}
-                >
-                   {getModelName(selectedModel)}
-                </span>
-              </div>
+      <div className="flex flex-col-reverse grow min-h-0 relative">
+        <div className="w-full px-4 pb-4 bg-base-100 flex flex-col justify-end">
+          {base64Image && (
+            <div className="relative inline-block w-24 h-24 mb-2">
+              <img 
+                src={`data:${imageMimeType};base64,${base64Image}`} 
+                alt="Preview" 
+                className="w-full h-full object-cover rounded-lg border border-base-content/20 shadow-sm"
+              />
+              <button 
+                type="button"
+                className="btn btn-circle btn-xs btn-error absolute -top-2 -right-2"
+                onClick={clearImage}
+              >
+                <FaTimes size={12} />
+              </button>
             </div>
-             {/* Actual Select - Invisible but clickable */}
-            <select
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              value={selectedModel}
-              disabled={isStreaming || isNavigating.current}
-              onChange={(e) => setSelectedModel(e.target.value)}
-            >
-              {MODELS.map((model) => (
-                <option key={model.id} value={model.id}>{model.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {selectedModel === 'gemini-3-pro-preview' && (
-            <select
-              className="select select-bordered join-item border-b-0 rounded-none h-12 sm:h-14 w-24 sm:w-auto"
-              value={thinkingLevel}
-              disabled={isStreaming || isNavigating.current}
-              onChange={(e) => setThinkingLevel(e.target.value)}
-            >
-              <option value="low">Low Thinking</option>
-              <option value="high">High Thinking</option>
-            </select>
           )}
-          <button
-            className="join-item btn btn-secondary border-b-0 rounded-r-lg rounded-b-none h-12 sm:h-14 w-24 sm:w-56"
-            disabled={isStreaming || isNavigating.current}
-            type="submit"
-          >
-            Send Query
-          </button>
-        </form>
+          
+          <form className="w-full join items-end" onSubmit={handleForm}>
+            <input 
+              type="file" 
+              accept="image/*" 
+              className="hidden" 
+              ref={fileInputRef} 
+              onChange={handleImageUpload}
+            />
+            
+            <button 
+              type="button"
+              className="btn btn-neutral join-item h-12 sm:h-14 px-3"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isStreaming || isNavigating.current}
+            >
+              <FaImage size={20} />
+            </button>
+
+            <textarea
+              className="input input-bordered outline-none! border-b-0 rounded-lg rounded-b-none mt-3 join-item max-h-52 h-24 sm:h-28 w-full py-2 text-wrap"
+              placeholder="Enter Query Here..."
+              name="query"
+              autoComplete="off"
+              onChange={(e) => setInputText(e.currentTarget.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleForm(e);
+                }
+              }}
+              rows="2"
+              value={inputText}
+            />
+            
+            <div className="relative join-item border border-base-content/20 border-b-0 border-r-0 h-12 sm:h-14 w-[140px] overflow-hidden bg-base-100 flex items-center rounded-none">
+              <div className="absolute inset-0 flex items-center px-2 pointer-events-none">
+                <div className="w-full overflow-hidden whitespace-nowrap" ref={marqueeContainerRef}>
+                  <span 
+                    ref={marqueeTextRef}
+                    className={`inline-block ${shouldAnimate ? 'animate-marquee' : ''}`}
+                    style={shouldAnimate ? { '--marquee-end': marqueeEnd } : {}}
+                  >
+                     {getModelName(selectedModel)}
+                  </span>
+                </div>
+              </div>
+              <select
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                value={selectedModel}
+                disabled={isStreaming || isNavigating.current}
+                onChange={(e) => setSelectedModel(e.target.value)}
+              >
+                {MODELS.map((model) => (
+                  <option key={model.id} value={model.id}>{model.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {selectedModel === 'gemini-3-pro-preview' && (
+              <select
+                className="select select-bordered join-item border-b-0 rounded-none h-12 sm:h-14 w-24 sm:w-auto"
+                value={thinkingLevel}
+                disabled={isStreaming || isNavigating.current}
+                onChange={(e) => setThinkingLevel(e.target.value)}
+              >
+                <option value="low">Low Thinking</option>
+                <option value="high">High Thinking</option>
+              </select>
+            )}
+
+            {isImageModel && (
+              <select
+                className="select select-bordered join-item border-b-0 rounded-none h-12 sm:h-14 w-24 sm:w-auto"
+                value={aspectRatio}
+                disabled={isStreaming || isNavigating.current}
+                onChange={(e) => setAspectRatio(e.target.value)}
+                title="Aspect Ratio"
+              >
+                <option value="1:1">1:1 Square</option>
+                <option value="16:9">16:9 Widescreen</option>
+                <option value="9:16">9:16 Portrait</option>
+                <option value="4:3">4:3 Standard</option>
+                <option value="3:4">3:4 Vertical</option>
+              </select>
+            )}
+
+            <button
+              className="join-item btn btn-secondary border-b-0 rounded-r-lg rounded-b-none h-12 sm:h-14 w-24 sm:w-56"
+              disabled={isStreaming || isNavigating.current || isUploading}
+              type="submit"
+            >
+              {isUploading ? <span className="loading loading-spinner"></span> : "Send"}
+            </button>
+          </form>
+        </div>
+
         <div 
-          className="overflow-auto grow min-h-0" 
+          className="overflow-auto grow min-h-0 px-4" 
           ref={scrollContainerRef}
           onScroll={handleScroll}
         >
           {messages.map((msg_obj, index) => {
             const { message = {}, createdAt } = msg_obj ?? {};
             const { role = "user", parts = [] } = message;
-            const text = parts[0]?.text;
+            const text = parts.find(p => p.text)?.text || "";
             let formatted_timestamp;
             if (createdAt) {
               formatted_timestamp = new Date(createdAt).toLocaleString("en-IN", {
@@ -423,7 +591,7 @@ const Chat = ({ chatId }) => {
                 key={index}
                 ref={index === messages.length - 1 ? newMsgRef : null}
               >
-                <div className="mr-3 flex justify-between items-center">
+                <div className="mr-3 flex justify-between items-center mb-2">
                   <div className="flex items-center font-bold text-primary">
                     {icon}&nbsp;{role === "user" ? "(You):-" : `(${getModelName(msg_obj.model || "Gemini AI")}):-`}
                   </div>
@@ -458,17 +626,19 @@ const Chat = ({ chatId }) => {
                         </div>
                       </div>
                     )}
-                    <span className="text-xs ">
+                    <span className="text-xs text-base-content/60">
                       {formatted_timestamp ? formatted_timestamp : ""}
                     </span>
                   </div>
                 </div>
-                {role === "model" && (text === "" || !text) && isStreaming && index === messages.length - 1 ? (
+                {role === "model" && (!parts.length || (parts.length === 1 && text === "")) && isStreaming && index === messages.length - 1 ? (
                   <div className="py-2">
                      <span className="loading loading-dots loading-md text-primary"></span>
                   </div>
                 ) : (
-                  <MarkdownViewer content={text ?? ""} role={role ?? "user"}/>
+                  <div>
+                    {renderMessageParts(parts, role)}
+                  </div>
                 )}
               </div>
             );
